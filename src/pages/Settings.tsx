@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -10,8 +11,43 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { usePreferences, type Preferences } from "@/hooks/usePreferences";
+import { uniqueLocations, uniqueExperiences } from "@/data/jobs";
+import { toast } from "@/hooks/use-toast";
+
+const modes = ["Remote", "Hybrid", "Onsite"] as const;
 
 const Settings = () => {
+  const { preferences, save } = usePreferences();
+  const [form, setForm] = useState<Preferences>(preferences);
+
+  const set = <K extends keyof Preferences>(key: K, val: Preferences[K]) =>
+    setForm((prev) => ({ ...prev, [key]: val }));
+
+  const toggleLocation = (loc: string) => {
+    set(
+      "preferredLocations",
+      form.preferredLocations.includes(loc)
+        ? form.preferredLocations.filter((l) => l !== loc)
+        : [...form.preferredLocations, loc],
+    );
+  };
+
+  const toggleMode = (mode: string) => {
+    set(
+      "preferredModes",
+      form.preferredModes.includes(mode)
+        ? form.preferredModes.filter((m) => m !== mode)
+        : [...form.preferredModes, mode],
+    );
+  };
+
+  const handleSave = () => {
+    save(form);
+    toast({ title: "Preferences saved", description: "Your matching criteria have been updated." });
+  };
+
   return (
     <main className="flex-1 px-s4 py-s4 max-w-2xl mx-auto w-full">
       <h1 className="font-serif text-3xl md:text-4xl font-semibold tracking-tight text-foreground">
@@ -31,55 +67,94 @@ const Settings = () => {
             <Label htmlFor="keywords">Role Keywords</Label>
             <Input
               id="keywords"
-              placeholder="e.g. Frontend Engineer, Product Designer"
+              placeholder="e.g. Frontend, SDE, Python Developer"
+              value={form.roleKeywords}
+              onChange={(e) => set("roleKeywords", e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">Comma-separated keywords matched against job titles & descriptions.</p>
           </div>
 
           {/* Preferred Locations */}
           <div className="space-y-s1">
-            <Label htmlFor="locations">Preferred Locations</Label>
-            <Input
-              id="locations"
-              placeholder="e.g. Bangalore, Mumbai, Delhi"
-            />
+            <Label>Preferred Locations</Label>
+            <div className="flex flex-wrap gap-s2 pt-1">
+              {uniqueLocations.map((loc) => (
+                <label key={loc} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={form.preferredLocations.includes(loc)}
+                    onCheckedChange={() => toggleLocation(loc)}
+                  />
+                  {loc}
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Mode */}
           <div className="space-y-s1">
             <Label>Work Mode</Label>
-            <RadioGroup defaultValue="remote" className="flex gap-s3 pt-1">
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="remote" id="remote" />
-                <Label htmlFor="remote" className="font-normal">Remote</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="hybrid" id="hybrid" />
-                <Label htmlFor="hybrid" className="font-normal">Hybrid</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="onsite" id="onsite" />
-                <Label htmlFor="onsite" className="font-normal">Onsite</Label>
-              </div>
-            </RadioGroup>
+            <div className="flex gap-s3 pt-1">
+              {modes.map((mode) => (
+                <label key={mode} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={form.preferredModes.includes(mode)}
+                    onCheckedChange={() => toggleMode(mode)}
+                  />
+                  {mode}
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Experience Level */}
           <div className="space-y-s1">
             <Label>Experience Level</Label>
-            <Select>
+            <Select
+              value={form.experienceLevel}
+              onValueChange={(v) => set("experienceLevel", v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select level" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="entry">Entry Level (0–2 yrs)</SelectItem>
-                <SelectItem value="mid">Mid Level (3–5 yrs)</SelectItem>
-                <SelectItem value="senior">Senior (6–10 yrs)</SelectItem>
-                <SelectItem value="lead">Lead / Staff (10+ yrs)</SelectItem>
+                {uniqueExperiences.map((e) => (
+                  <SelectItem key={e} value={e}>
+                    {e === "Fresher" ? "Fresher" : `${e} yrs`}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          <Button className="mt-s2" disabled>
+          {/* Skills */}
+          <div className="space-y-s1">
+            <Label htmlFor="skills">Skills</Label>
+            <Input
+              id="skills"
+              placeholder="e.g. React, Java, SQL, Python"
+              value={form.skills}
+              onChange={(e) => set("skills", e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Comma-separated. Matched against job skill requirements.</p>
+          </div>
+
+          {/* Min Match Score */}
+          <div className="space-y-s1">
+            <Label>Minimum Match Score: {form.minMatchScore}%</Label>
+            <Slider
+              value={[form.minMatchScore]}
+              onValueChange={([v]) => set("minMatchScore", v)}
+              min={0}
+              max={100}
+              step={5}
+              className="py-2"
+            />
+            <p className="text-xs text-muted-foreground">
+              Jobs scoring below this won't appear when "Show only matches" is enabled.
+            </p>
+          </div>
+
+          <Button className="mt-s2" onClick={handleSave}>
             Save Preferences
           </Button>
         </CardContent>

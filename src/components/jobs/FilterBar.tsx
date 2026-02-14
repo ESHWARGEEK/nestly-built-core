@@ -108,6 +108,7 @@ const FilterBar = ({ filters, onChange }: Props) => {
         <SelectContent>
           <SelectItem value="latest">Latest</SelectItem>
           <SelectItem value="oldest">Oldest</SelectItem>
+          <SelectItem value="match">Match Score</SelectItem>
           <SelectItem value="az">A → Z</SelectItem>
         </SelectContent>
       </Select>

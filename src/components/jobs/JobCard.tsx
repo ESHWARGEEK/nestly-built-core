@@ -1,11 +1,12 @@
 import { Bookmark, BookmarkCheck, ExternalLink, Eye } from "lucide-react";
 import type { Job } from "@/data/jobs";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { scoreBadgeColor } from "@/lib/matchScore";
 
 interface Props {
   job: Job;
   saved: boolean;
+  matchScore?: number;
   onToggleSave: (id: number) => void;
   onView: (job: Job) => void;
 }
@@ -22,7 +23,7 @@ const sourceBg: Record<string, string> = {
   Indeed: "bg-[hsl(30,70%,92%)] text-[hsl(30,70%,30%)]",
 };
 
-const JobCard = ({ job, saved, onToggleSave, onView }: Props) => (
+const JobCard = ({ job, saved, matchScore, onToggleSave, onView }: Props) => (
   <div className="rounded-lg border border-border bg-card p-s3 flex flex-col gap-s2 transition-system hover:border-primary/30">
     {/* Header row */}
     <div className="flex items-start justify-between gap-s2">
@@ -32,11 +33,20 @@ const JobCard = ({ job, saved, onToggleSave, onView }: Props) => (
         </h3>
         <p className="mt-0.5 text-sm text-muted-foreground">{job.company}</p>
       </div>
-      <span
-        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${sourceBg[job.source] ?? ""}`}
-      >
-        {job.source}
-      </span>
+      <div className="flex shrink-0 items-center gap-1.5">
+        {matchScore !== undefined && (
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${scoreBadgeColor(matchScore)}`}
+          >
+            {matchScore}%
+          </span>
+        )}
+        <span
+          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${sourceBg[job.source] ?? ""}`}
+        >
+          {job.source}
+        </span>
+      </div>
     </div>
 
     {/* Meta */}
