@@ -1,9 +1,16 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { Settings, SlidersHorizontal } from "lucide-react";
 import { jobs, type Job } from "@/data/jobs";
 import FilterBar, { type Filters } from "@/components/jobs/FilterBar";
 import JobCard from "@/components/jobs/JobCard";
 import JobDetailDialog from "@/components/jobs/JobDetailDialog";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
+import { usePreferences } from "@/hooks/usePreferences";
+import { computeMatchScore } from "@/lib/matchScore";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 const defaultFilters: Filters = {
   keyword: "",
@@ -17,30 +24,48 @@ const defaultFilters: Filters = {
 const Dashboard = () => {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [viewJob, setViewJob] = useState<Job | null>(null);
+  const [matchOnly, setMatchOnly] = useState(false);
   const { toggle, isSaved } = useSavedJobs();
+  const { preferences, hasPreferences } = usePreferences();
+
+  // Pre-compute scores once per preference change
+  const scoredJobs = useMemo(() => {
+    return jobs.map((job) => ({
+      job,
+      score: hasPreferences ? computeMatchScore(job, preferences) : undefined,
+    }));
+  }, [preferences, hasPreferences]);
 
   const filtered = useMemo(() => {
-    let list = [...jobs];
+    let list = [...scoredJobs];
 
+    // Filter by keyword
     if (filters.keyword) {
       const kw = filters.keyword.toLowerCase();
       list = list.filter(
-        (j) =>
-          j.title.toLowerCase().includes(kw) ||
-          j.company.toLowerCase().includes(kw),
+        (item) =>
+          item.job.title.toLowerCase().includes(kw) ||
+          item.job.company.toLowerCase().includes(kw),
       );
     }
-    if (filters.location !== "all") list = list.filter((j) => j.location === filters.location);
-    if (filters.mode !== "all") list = list.filter((j) => j.mode === filters.mode);
-    if (filters.experience !== "all") list = list.filter((j) => j.experience === filters.experience);
-    if (filters.source !== "all") list = list.filter((j) => j.source === filters.source);
+    if (filters.location !== "all") list = list.filter((item) => item.job.location === filters.location);
+    if (filters.mode !== "all") list = list.filter((item) => item.job.mode === filters.mode);
+    if (filters.experience !== "all") list = list.filter((item) => item.job.experience === filters.experience);
+    if (filters.source !== "all") list = list.filter((item) => item.job.source === filters.source);
 
-    if (filters.sort === "latest") list.sort((a, b) => a.postedDaysAgo - b.postedDaysAgo);
-    else if (filters.sort === "oldest") list.sort((a, b) => b.postedDaysAgo - a.postedDaysAgo);
-    else if (filters.sort === "az") list.sort((a, b) => a.title.localeCompare(b.title));
+    // Match-only toggle
+    if (matchOnly && hasPreferences) {
+      list = list.filter((item) => (item.score ?? 0) >= preferences.minMatchScore);
+    }
+
+    // Sorting
+    if (filters.sort === "latest") list.sort((a, b) => a.job.postedDaysAgo - b.job.postedDaysAgo);
+    else if (filters.sort === "oldest") list.sort((a, b) => b.job.postedDaysAgo - a.job.postedDaysAgo);
+    else if (filters.sort === "match") list.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    else if (filters.sort === "az") list.sort((a, b) => a.job.title.localeCompare(b.job.title));
 
     return list;
-  }, [filters]);
+  }, [filters, scoredJobs, matchOnly, hasPreferences, preferences.minMatchScore]);
 
   return (
     <main className="flex-1 px-s4 py-s4">
@@ -53,14 +78,42 @@ const Dashboard = () => {
         </p>
       </div>
 
+      {/* Preferences banner */}
+      {!hasPreferences && (
+        <div className="mb-s3 flex items-center gap-s2 rounded-lg border border-border bg-card p-s2">
+          <Settings className="h-5 w-5 shrink-0 text-primary" />
+          <p className="text-sm text-foreground">
+            Set your preferences to activate intelligent matching.
+          </p>
+          <Button variant="outline" size="sm" asChild className="ml-auto shrink-0">
+            <Link to="/settings">Go to Settings</Link>
+          </Button>
+        </div>
+      )}
+
       <FilterBar filters={filters} onChange={setFilters} />
 
+      {/* Match toggle */}
+      {hasPreferences && (
+        <div className="mt-s2 flex items-center gap-s2">
+          <Switch
+            id="match-toggle"
+            checked={matchOnly}
+            onCheckedChange={setMatchOnly}
+          />
+          <Label htmlFor="match-toggle" className="text-sm font-normal cursor-pointer">
+            Show only jobs above my threshold ({preferences.minMatchScore}%)
+          </Label>
+        </div>
+      )}
+
       <div className="mt-s3 grid gap-s2 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((job) => (
+        {filtered.map((item) => (
           <JobCard
-            key={job.id}
-            job={job}
-            saved={isSaved(job.id)}
+            key={item.job.id}
+            job={item.job}
+            saved={isSaved(item.job.id)}
+            matchScore={item.score}
             onToggleSave={toggle}
             onView={setViewJob}
           />
@@ -69,9 +122,12 @@ const Dashboard = () => {
 
       {filtered.length === 0 && (
         <div className="mt-s5 text-center">
-          <p className="font-serif text-xl text-foreground">No jobs match your filters.</p>
+          <SlidersHorizontal className="mx-auto h-10 w-10 text-muted-foreground/40" />
+          <p className="mt-s2 font-serif text-xl text-foreground">
+            No roles match your criteria.
+          </p>
           <p className="mt-s1 text-sm text-muted-foreground">
-            Try broadening your search criteria.
+            Adjust filters or lower your match threshold.
           </p>
         </div>
       )}
