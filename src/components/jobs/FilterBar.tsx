@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { uniqueLocations, uniqueModes, uniqueExperiences, uniqueSources } from "@/data/jobs";
+import { JOB_STATUSES } from "@/hooks/useJobStatus";
 import { Search } from "lucide-react";
 
 export interface Filters {
@@ -16,6 +17,7 @@ export interface Filters {
   experience: string;
   source: string;
   sort: string;
+  status: string;
 }
 
 interface Props {
@@ -48,9 +50,7 @@ const FilterBar = ({ filters, onChange }: Props) => {
         <SelectContent>
           <SelectItem value="all">All Locations</SelectItem>
           {uniqueLocations.map((l) => (
-            <SelectItem key={l} value={l}>
-              {l}
-            </SelectItem>
+            <SelectItem key={l} value={l}>{l}</SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -63,9 +63,7 @@ const FilterBar = ({ filters, onChange }: Props) => {
         <SelectContent>
           <SelectItem value="all">All Modes</SelectItem>
           {uniqueModes.map((m) => (
-            <SelectItem key={m} value={m}>
-              {m}
-            </SelectItem>
+            <SelectItem key={m} value={m}>{m}</SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -78,9 +76,7 @@ const FilterBar = ({ filters, onChange }: Props) => {
         <SelectContent>
           <SelectItem value="all">All Levels</SelectItem>
           {uniqueExperiences.map((e) => (
-            <SelectItem key={e} value={e}>
-              {e === "Fresher" ? "Fresher" : `${e} yrs`}
-            </SelectItem>
+            <SelectItem key={e} value={e}>{e === "Fresher" ? "Fresher" : `${e} yrs`}</SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -93,9 +89,20 @@ const FilterBar = ({ filters, onChange }: Props) => {
         <SelectContent>
           <SelectItem value="all">All Sources</SelectItem>
           {uniqueSources.map((s) => (
-            <SelectItem key={s} value={s}>
-              {s}
-            </SelectItem>
+            <SelectItem key={s} value={s}>{s}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Status */}
+      <Select value={filters.status} onValueChange={(v) => set("status", v)}>
+        <SelectTrigger className="w-full sm:w-[140px]">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Statuses</SelectItem>
+          {JOB_STATUSES.map((s) => (
+            <SelectItem key={s} value={s}>{s}</SelectItem>
           ))}
         </SelectContent>
       </Select>
