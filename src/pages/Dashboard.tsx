@@ -7,6 +7,7 @@ import JobCard from "@/components/jobs/JobCard";
 import JobDetailDialog from "@/components/jobs/JobDetailDialog";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
 import { usePreferences } from "@/hooks/usePreferences";
+import { useJobStatus } from "@/hooks/useJobStatus";
 import { computeMatchScore } from "@/lib/matchScore";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,7 @@ const defaultFilters: Filters = {
   experience: "all",
   source: "all",
   sort: "latest",
+  status: "all",
 };
 
 const Dashboard = () => {
@@ -27,8 +29,8 @@ const Dashboard = () => {
   const [matchOnly, setMatchOnly] = useState(false);
   const { toggle, isSaved } = useSavedJobs();
   const { preferences, hasPreferences } = usePreferences();
+  const { getStatus, setStatus } = useJobStatus();
 
-  // Pre-compute scores once per preference change
   const scoredJobs = useMemo(() => {
     return jobs.map((job) => ({
       job,
@@ -39,7 +41,6 @@ const Dashboard = () => {
   const filtered = useMemo(() => {
     let list = [...scoredJobs];
 
-    // Filter by keyword
     if (filters.keyword) {
       const kw = filters.keyword.toLowerCase();
       list = list.filter(
@@ -52,20 +53,19 @@ const Dashboard = () => {
     if (filters.mode !== "all") list = list.filter((item) => item.job.mode === filters.mode);
     if (filters.experience !== "all") list = list.filter((item) => item.job.experience === filters.experience);
     if (filters.source !== "all") list = list.filter((item) => item.job.source === filters.source);
+    if (filters.status !== "all") list = list.filter((item) => getStatus(item.job.id) === filters.status);
 
-    // Match-only toggle
     if (matchOnly && hasPreferences) {
       list = list.filter((item) => (item.score ?? 0) >= preferences.minMatchScore);
     }
 
-    // Sorting
     if (filters.sort === "latest") list.sort((a, b) => a.job.postedDaysAgo - b.job.postedDaysAgo);
     else if (filters.sort === "oldest") list.sort((a, b) => b.job.postedDaysAgo - a.job.postedDaysAgo);
     else if (filters.sort === "match") list.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
     else if (filters.sort === "az") list.sort((a, b) => a.job.title.localeCompare(b.job.title));
 
     return list;
-  }, [filters, scoredJobs, matchOnly, hasPreferences, preferences.minMatchScore]);
+  }, [filters, scoredJobs, matchOnly, hasPreferences, preferences.minMatchScore, getStatus]);
 
   return (
     <main className="flex-1 px-s4 py-s4">
@@ -78,7 +78,6 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* Preferences banner */}
       {!hasPreferences && (
         <div className="mb-s3 flex items-center gap-s2 rounded-lg border border-border bg-card p-s2">
           <Settings className="h-5 w-5 shrink-0 text-primary" />
@@ -93,7 +92,6 @@ const Dashboard = () => {
 
       <FilterBar filters={filters} onChange={setFilters} />
 
-      {/* Match toggle */}
       {hasPreferences && (
         <div className="mt-s2 flex items-center gap-s2">
           <Switch
@@ -114,8 +112,10 @@ const Dashboard = () => {
             job={item.job}
             saved={isSaved(item.job.id)}
             matchScore={item.score}
+            status={getStatus(item.job.id)}
             onToggleSave={toggle}
             onView={setViewJob}
+            onStatusChange={setStatus}
           />
         ))}
       </div>

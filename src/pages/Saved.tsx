@@ -4,9 +4,11 @@ import { jobs, type Job } from "@/data/jobs";
 import JobCard from "@/components/jobs/JobCard";
 import JobDetailDialog from "@/components/jobs/JobDetailDialog";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
+import { useJobStatus } from "@/hooks/useJobStatus";
 
 const Saved = () => {
   const { savedIds, toggle, isSaved } = useSavedJobs();
+  const { getStatus, setStatus } = useJobStatus();
   const [viewJob, setViewJob] = useState<Job | null>(null);
 
   const savedJobs = jobs.filter((j) => savedIds.includes(j.id));
@@ -40,8 +42,10 @@ const Saved = () => {
             key={job.id}
             job={job}
             saved={isSaved(job.id)}
+            status={getStatus(job.id)}
             onToggleSave={toggle}
             onView={setViewJob}
+            onStatusChange={setStatus}
           />
         ))}
       </div>

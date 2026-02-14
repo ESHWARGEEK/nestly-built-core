@@ -2,13 +2,16 @@ import { Bookmark, BookmarkCheck, ExternalLink, Eye } from "lucide-react";
 import type { Job } from "@/data/jobs";
 import { Button } from "@/components/ui/button";
 import { scoreBadgeColor } from "@/lib/matchScore";
+import { type JobStatus, JOB_STATUSES } from "@/hooks/useJobStatus";
 
 interface Props {
   job: Job;
   saved: boolean;
   matchScore?: number;
+  status: JobStatus;
   onToggleSave: (id: number) => void;
   onView: (job: Job) => void;
+  onStatusChange: (jobId: number, status: JobStatus, title: string, company: string) => void;
 }
 
 function postedLabel(days: number) {
@@ -23,7 +26,14 @@ const sourceBg: Record<string, string> = {
   Indeed: "bg-[hsl(30,70%,92%)] text-[hsl(30,70%,30%)]",
 };
 
-const JobCard = ({ job, saved, matchScore, onToggleSave, onView }: Props) => (
+const statusColors: Record<JobStatus, string> = {
+  "Not Applied": "bg-muted text-muted-foreground",
+  Applied: "bg-[hsl(210,70%,92%)] text-[hsl(210,70%,30%)]",
+  Rejected: "bg-[hsl(0,60%,92%)] text-[hsl(0,60%,35%)]",
+  Selected: "bg-[hsl(140,40%,90%)] text-[hsl(140,40%,25%)]",
+};
+
+const JobCard = ({ job, saved, matchScore, status, onToggleSave, onView, onStatusChange }: Props) => (
   <div className="rounded-lg border border-border bg-card p-s3 flex flex-col gap-s2 transition-system hover:border-primary/30">
     {/* Header row */}
     <div className="flex items-start justify-between gap-s2">
@@ -58,8 +68,30 @@ const JobCard = ({ job, saved, matchScore, onToggleSave, onView }: Props) => (
       <span>{job.salaryRange}</span>
     </div>
 
-    {/* Posted */}
-    <p className="text-xs text-muted-foreground">{postedLabel(job.postedDaysAgo)}</p>
+    {/* Posted + Status */}
+    <div className="flex items-center justify-between gap-s2">
+      <p className="text-xs text-muted-foreground">{postedLabel(job.postedDaysAgo)}</p>
+      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusColors[status]}`}>
+        {status}
+      </span>
+    </div>
+
+    {/* Status buttons */}
+    <div className="flex flex-wrap gap-1">
+      {JOB_STATUSES.map((s) => (
+        <button
+          key={s}
+          onClick={() => onStatusChange(job.id, s, job.title, job.company)}
+          className={`rounded-md px-2 py-0.5 text-[11px] font-medium transition-system ${
+            status === s
+              ? statusColors[s] + " ring-1 ring-border"
+              : "bg-muted/50 text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          {s}
+        </button>
+      ))}
+    </div>
 
     {/* Actions */}
     <div className="mt-auto flex items-center gap-s1 pt-s1 border-t border-border">
